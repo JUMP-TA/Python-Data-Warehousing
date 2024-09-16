@@ -27,12 +27,20 @@ def lambda_handler(event, context):
     reader = csv.reader(file_data)
     next(reader)  # Skip header
     
-    # Insert data into Redshift
+    # Insert data into Redshift - Separate the data into two tables
     for row in reader:
+        # Insert into customers table
         cursor.execute("""
-            INSERT INTO your_table_name (customer_id, customer_name, order_id, order_amount, order_date)
-            VALUES (%s, %s, %s, %s, %s)
-        """, row)
+            INSERT INTO customers (customer_id, customer_name)
+            VALUES (%s, %s)
+            ON CONFLICT (customer_id) DO NOTHING;  -- Ensure no duplicates
+        """, (row[0], row[1]))
+
+        # Insert into orders table
+        cursor.execute("""
+            INSERT INTO orders (order_id, customer_id, order_amount, order_date)
+            VALUES (%s, %s, %s, %s)
+        """, (row[2], row[0], row[3], row[4]))
 
     conn.commit()
     cursor.close()
